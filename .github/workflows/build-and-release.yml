@@ -1,0 +1,105 @@
+name: Build Kotlin Patched Artifact
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - '*'
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git curl unzip
+
+      - name: Get Kotlin source
+        run: |
+          ./get_source.sh
+
+      - name: Apply patches
+        run: |
+          ./patch.sh
+
+      - name: Build JAR
+        run: |
+          ./build.sh
+
+      - name: Compute metadata
+        id: meta
+        run: |
+          JAR=$(ls outputs/*.jar | head -n1)
+          echo "jar=$JAR" >> $GITHUB_OUTPUT
+
+          NAME=$(basename "$JAR")
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+
+          SHA256=$(sha256sum "$JAR" | awk '{print $1}')
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+
+          VERSION=$(echo "$NAME" | sed -E 's/.*-([0-9]+\.[0-9]+\.[0-9]+)-SNAPSHOT.*/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kotlin-jar
+          path: ${{ steps.meta.outputs.jar }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: kotlin-jar
+          path: outputs
+
+      - name: Extract metadata
+        id: meta
+        run: |
+          JAR=$(ls outputs/*.jar | head -n1)
+          NAME=$(basename "$JAR")
+
+          SHA256=$(sha256sum "$JAR" | awk '{print $1}')
+          VERSION=$(echo "$NAME" | sed -E 's/.*-([0-9]+\.[0-9]+\.[0-9]+)-SNAPSHOT.*/\1/')
+
+          echo "jar=$JAR" >> $GITHUB_OUTPUT
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.version }}
+          name: Kotlin ${{ steps.meta.outputs.version }} (patched)
+          body: |
+            Kotlin Version: ${{ steps.meta.outputs.version }}
+
+            Artifact: ${{ steps.meta.outputs.name }}
+
+            SHA256: ${{ steps.meta.outputs.sha256 }}
+          files: ${{ steps.meta.outputs.jar }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
