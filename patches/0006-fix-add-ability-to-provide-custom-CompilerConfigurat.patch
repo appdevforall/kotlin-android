@@ -1,4 +1,4 @@
-From 3207a6788ddf111a09aa02e34af6a1c5bc8e161b Mon Sep 17 00:00:00 2001
+From 70cc3234eb33da15703904e5516fe7041c89dd3d Mon Sep 17 00:00:00 2001
 From: Akash Yadav <contact@itsaky.com>
 Date: Fri, 13 Mar 2026 19:16:19 +0530
 Subject: [PATCH 6/7] fix: add ability to provide custom CompilerConfiguration
