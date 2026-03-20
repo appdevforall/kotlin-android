@@ -1,4 +1,4 @@
-From 50e859595652aeb4227fec4abf81920016b1d573 Mon Sep 17 00:00:00 2001
+From 6c16fb3d36855b3499ab858379bade4a755c0c91 Mon Sep 17 00:00:00 2001
 From: Akash Yadav <contact@itsaky.com>
 Date: Fri, 13 Mar 2026 19:14:18 +0530
 Subject: [PATCH 4/7] feat: add analysis-api-standalone-embeddable-for-ide
@@ -9,9 +9,9 @@ Signed-off-by: Akash Yadav <contact@itsaky.com>
  build.gradle.kts                              |  1 +
  gradle/verification-metadata.xml              | 12 +++
  gradle/versions.properties                    |  4 +
- .../build.gradle.kts                          | 86 +++++++++++++++++++
+ .../build.gradle.kts                          | 90 +++++++++++++++++++
  settings.gradle                               |  1 +
- 5 files changed, 104 insertions(+)
+ 5 files changed, 108 insertions(+)
  create mode 100644 prepare/ide-plugin-dependencies/analysis-api-standalone-embeddable-for-ide/build.gradle.kts
 
 diff --git a/build.gradle.kts b/build.gradle.kts
@@ -63,10 +63,10 @@ index 903ff4bcfd46..4ea88f7b8eae 100644
 \ No newline at end of file
 diff --git a/prepare/ide-plugin-dependencies/analysis-api-standalone-embeddable-for-ide/build.gradle.kts b/prepare/ide-plugin-dependencies/analysis-api-standalone-embeddable-for-ide/build.gradle.kts
 new file mode 100644
-index 000000000000..207527cc53bd
+index 000000000000..7f6cb0d149e3
 --- /dev/null
 +++ b/prepare/ide-plugin-dependencies/analysis-api-standalone-embeddable-for-ide/build.gradle.kts
-@@ -0,0 +1,86 @@
+@@ -0,0 +1,90 @@
 +import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 +
 +plugins {
@@ -108,6 +108,7 @@ index 000000000000..207527cc53bd
 +    listOf(
 +        "com.google",
 +        "com.sampullara",
++        "org.antlr",
 +        "org.apache",
 +        "org.jdom",
 +        "org.picocontainer",
@@ -116,6 +117,7 @@ index 000000000000..207527cc53bd
 +        "net.jpountz",
 +        "it.unimi.dsi.fastutil",
 +        "javax.annotation",
++        "javax.management",
 +        "kotlinx.collections.immutable",
 +        "com.fasterxml",
 +        "org.codehaus",
@@ -145,12 +147,14 @@ index 000000000000..207527cc53bd
 +        exclude("org.fusesource.jansi.internal.CLibrary")
 +    }
 +
-+    relocate("javax.xml", "jaxp.xml")
-+
 +    exclude("org/checkerframework/**",)
-+    exclude("org/intellij/lang/annotations",)
++    exclude("org/intellij/lang/annotations/**")
 +    exclude("com/sun/jna/**")
 +    exclude("org/jetbrains/annotations/**")
++
++    // Code On the Go relocates java.xml to jaxp.xml
++    relocate("javax.xml", "jaxp.xml")
++
 +    mergeServiceFiles()
 +}
 diff --git a/settings.gradle b/settings.gradle
