@@ -1,7 +1,7 @@
 From 098e5d16e7a537e90db7a84c7cb9f97495340162 Mon Sep 17 00:00:00 2001
 From: Akash Yadav <akashyadav@appdevforall.org>
 Date: Thu, 26 Mar 2026 14:17:23 +0530
-Subject: [PATCH 2/8] fix: replace usage of JavaVersion.current() with
+Subject: [PATCH 2/9] fix: replace usage of JavaVersion.current() with
  androidJavaVersion()
 
 JavaVersion.current() tries to use system properties like 'java.version' and 'java.runtime.version'

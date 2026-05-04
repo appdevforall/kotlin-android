@@ -1,7 +1,7 @@
 From 6f5f186a640e0d4ef0bff4d18dbb36f969dc5b16 Mon Sep 17 00:00:00 2001
 From: Akash Yadav <akashyadav@appdevforall.org>
 Date: Thu, 26 Mar 2026 14:12:33 +0530
-Subject: [PATCH 1/8] fix: use application class loader to find jrt:/ file
+Subject: [PATCH 1/9] fix: use application class loader to find jrt:/ file
  system
 
 The JRT file system is not available on Android. It needs to be part of the application.

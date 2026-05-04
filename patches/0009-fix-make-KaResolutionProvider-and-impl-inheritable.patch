@@ -1,0 +1,71 @@
+From fa03cc9fb87f85b49c033e8b0c9decd3f4aaf1b2 Mon Sep 17 00:00:00 2001
+From: Akash Yadav <akashyadav@appdevforall.org>
+Date: Mon, 4 May 2026 14:24:33 +0530
+Subject: [PATCH 9/9] fix: make KaResolutionProvider and impl inheritable
+
+Signed-off-by: Akash Yadav <akashyadav@appdevforall.org>
+---
+ .../base/projectStructure/KaBaseResolutionScope.kt     |  2 +-
+ .../projectStructure/KaBaseResolutionScopeProvider.kt  | 10 +++++-----
+ 2 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/analysis/analysis-api-impl-base/src/org/jetbrains/kotlin/analysis/api/impl/base/projectStructure/KaBaseResolutionScope.kt b/analysis/analysis-api-impl-base/src/org/jetbrains/kotlin/analysis/api/impl/base/projectStructure/KaBaseResolutionScope.kt
+index 84b032403466..3f2f14b43aba 100644
+--- a/analysis/analysis-api-impl-base/src/org/jetbrains/kotlin/analysis/api/impl/base/projectStructure/KaBaseResolutionScope.kt
++++ b/analysis/analysis-api-impl-base/src/org/jetbrains/kotlin/analysis/api/impl/base/projectStructure/KaBaseResolutionScope.kt
+@@ -24,7 +24,7 @@ import org.jetbrains.kotlin.psi.KtFile
+  * @param analyzableModules The set of modules whose declarations can be analyzed from the [useSiteModule], including the use-site module
+  *  itself.
+  */
+-internal class KaBaseResolutionScope(
++class KaBaseResolutionScope(
+     private val useSiteModule: KaModule,
+     private val searchScope: GlobalSearchScope,
+     private val analyzableModules: Set<KaModule>,
+diff --git a/analysis/analysis-api-impl-base/src/org/jetbrains/kotlin/analysis/api/impl/base/projectStructure/KaBaseResolutionScopeProvider.kt b/analysis/analysis-api-impl-base/src/org/jetbrains/kotlin/analysis/api/impl/base/projectStructure/KaBaseResolutionScopeProvider.kt
+index 29d9b44d4321..01ca9c28e685 100644
+--- a/analysis/analysis-api-impl-base/src/org/jetbrains/kotlin/analysis/api/impl/base/projectStructure/KaBaseResolutionScopeProvider.kt
++++ b/analysis/analysis-api-impl-base/src/org/jetbrains/kotlin/analysis/api/impl/base/projectStructure/KaBaseResolutionScopeProvider.kt
+@@ -19,7 +19,7 @@ import org.jetbrains.kotlin.analysis.api.projectStructure.KaModule
+ import org.jetbrains.kotlin.analysis.decompiler.psi.BuiltinsVirtualFileProvider
+ import java.time.Duration
+ 
+-class KaBaseResolutionScopeProvider : KaResolutionScopeProvider {
++open class KaBaseResolutionScopeProvider : KaResolutionScopeProvider {
+     override fun getResolutionScope(module: KaModule): KaResolutionScope {
+         return resolutionScopeCache.getOrPut(module) { module ->
+             val analyzableModules = getAnalyzableModules(module)
+@@ -28,7 +28,7 @@ class KaBaseResolutionScopeProvider : KaResolutionScopeProvider {
+         }
+     }
+ 
+-    private fun getAnalyzableModules(module: KaModule): Set<KaModule> =
++    protected open fun getAnalyzableModules(module: KaModule): Set<KaModule> =
+         buildSet {
+             add(module)
+             addAll(module.directRegularDependencies)
+@@ -39,7 +39,7 @@ class KaBaseResolutionScopeProvider : KaResolutionScopeProvider {
+             }
+         }
+ 
+-    private fun buildSearchScope(module: KaModule, analyzableModules: Set<KaModule>): GlobalSearchScope {
++    protected open fun buildSearchScope(module: KaModule, analyzableModules: Set<KaModule>): GlobalSearchScope {
+         val scopes = buildList {
+             analyzableModules.mapTo(this) { it.contentScope }
+             if (analyzableModules.none { it is KaBuiltinsModule }) {
+@@ -53,10 +53,10 @@ class KaBaseResolutionScopeProvider : KaResolutionScopeProvider {
+         return KaGlobalSearchScopeMerger.getInstance(module.project).union(scopes)
+     }
+ 
+-    private fun createBuiltinsScope(project: Project): GlobalSearchScope {
++    protected open fun createBuiltinsScope(project: Project): GlobalSearchScope {
+         return BuiltinsVirtualFileProvider.getInstance().createBuiltinsScope(project)
+     }
+ 
+-    private val resolutionScopeCache: Cache<KaModule, KaResolutionScope> =
++    protected val resolutionScopeCache: Cache<KaModule, KaResolutionScope> =
+         Caffeine.newBuilder().weakKeys().softValues().expireAfterAccess(Duration.ofSeconds(10)).build()
+ }
+-- 
+2.53.0
+

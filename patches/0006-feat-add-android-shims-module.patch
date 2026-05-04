@@ -1,7 +1,7 @@
 From 30bce14d894ec58de4e35c3e8fd129568dd46086 Mon Sep 17 00:00:00 2001
 From: Akash Yadav <akashyadav@appdevforall.org>
 Date: Thu, 26 Mar 2026 14:35:40 +0530
-Subject: [PATCH 6/8] feat: add android-shims module
+Subject: [PATCH 6/9] feat: add android-shims module
 
 This module contains the shimmed versions of various classes modified
 to adapt to the Android runtime. The module works in coordination of

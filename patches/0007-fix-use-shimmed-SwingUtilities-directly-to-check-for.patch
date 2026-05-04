@@ -1,7 +1,7 @@
 From fb5bacc5a4700c2b24405103e6553403f4433cec Mon Sep 17 00:00:00 2001
 From: Akash Yadav <akashyadav@appdevforall.org>
 Date: Thu, 26 Mar 2026 14:37:27 +0530
-Subject: [PATCH 7/8] fix: use shimmed SwingUtilities directly to check for
+Subject: [PATCH 7/9] fix: use shimmed SwingUtilities directly to check for
  event dispatcher thread
 
 Since we already have a shimmed SwingUtilities class compatible with

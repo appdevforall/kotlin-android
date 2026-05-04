@@ -1,7 +1,7 @@
 From 8308dadfcc27b643b799076de9acfddca02be2ba Mon Sep 17 00:00:00 2001
 From: Akash Yadav <akashyadav@appdevforall.org>
 Date: Thu, 26 Mar 2026 14:33:40 +0530
-Subject: [PATCH 5/8] feat: add analysis-api-standalone-embeddable-for-ide
+Subject: [PATCH 5/9] feat: add analysis-api-standalone-embeddable-for-ide
  module
 
 This is an embeddable variant of the analysis-api-standalone-for-ide module,
