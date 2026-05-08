@@ -1,4 +1,4 @@
-From 30bce14d894ec58de4e35c3e8fd129568dd46086 Mon Sep 17 00:00:00 2001
+From 6a2d82a72828ffc1a7e686b62a57ef86a3f60c58 Mon Sep 17 00:00:00 2001
 From: Akash Yadav <akashyadav@appdevforall.org>
 Date: Thu, 26 Mar 2026 14:35:40 +0530
 Subject: [PATCH 6/9] feat: add android-shims module
@@ -17,14 +17,14 @@ Signed-off-by: Akash Yadav <akashyadav@appdevforall.org>
  .../benmanes/caffeine/cache/UnsafeAccess.java |  85 ++++++++++
  .../openapi/util/LowMemoryWatcherManager.java |  86 +++++++++++
  .../util/DebugAttachDetectorArgs.java         |  57 +++++++
- .../com/intellij/util/containers/Unsafe.java  | 141 +++++++++++++++++
+ .../com/intellij/util/containers/Unsafe.java  | 138 +++++++++++++++++
  .../android/javax/swing/SwingUtilities.java   | 145 ++++++++++++++++++
  .../openapi/util/LowMemoryWatcherAccess.java  |   8 +
  .../src/main/java/gnu/trove/Equality.java     |  53 +++++++
  .../gnu/trove/TObjectHashingStrategy.java     |  64 ++++++++
  .../internal/intellij/IntellijCoroutines.kt   |  29 ++++
  settings.gradle                               |   3 +-
- 14 files changed, 808 insertions(+), 1 deletion(-)
+ 14 files changed, 805 insertions(+), 1 deletion(-)
  create mode 100644 prepare/ide-plugin-dependencies/android-shims/build.gradle.kts
  create mode 100644 prepare/ide-plugin-dependencies/android-shims/src/main/java/com/android/com/github/benmanes/caffeine/base/UnsafeAccess.java
  create mode 100644 prepare/ide-plugin-dependencies/android-shims/src/main/java/com/android/com/github/benmanes/caffeine/cache/UnsafeAccess.java
@@ -458,10 +458,10 @@ index 000000000000..16dbed150a90
 +}
 diff --git a/prepare/ide-plugin-dependencies/android-shims/src/main/java/com/android/com/intellij/util/containers/Unsafe.java b/prepare/ide-plugin-dependencies/android-shims/src/main/java/com/android/com/intellij/util/containers/Unsafe.java
 new file mode 100644
-index 000000000000..df7ce9244f03
+index 000000000000..7fd8ec2e0909
 --- /dev/null
 +++ b/prepare/ide-plugin-dependencies/android-shims/src/main/java/com/android/com/intellij/util/containers/Unsafe.java
-@@ -0,0 +1,141 @@
+@@ -0,0 +1,138 @@
 +/*
 + * Copyright 2010-2026 JetBrains s.r.o. and Kotlin Programming Language contributors.
 + * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
@@ -496,9 +496,6 @@ index 000000000000..df7ce9244f03
 +
 +	static {
 +		try {
-+			// ensure we can access sun.misc.Unsafe
-+			HiddenApiBypass.addHiddenApiExemptions("Lsun/misc/Unsafe;");
-+
 +			Class<?> unsafeClass = Class.forName("sun.misc.Unsafe");
 +			unsafe = HiddenApiBypass.invoke(unsafeClass, null, "getUnsafe");
 +			putObjectVolatile = find("putObjectVolatile", Object.class, long.class, Object.class);
@@ -948,5 +945,5 @@ index 1ecaca4b0010..a6fbfbda847a 100644
  
  include ":compiler:build-tools:kotlin-build-tools-api",
 -- 
-2.53.0
+2.54.0
 

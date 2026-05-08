@@ -1,4 +1,4 @@
-From fa03cc9fb87f85b49c033e8b0c9decd3f4aaf1b2 Mon Sep 17 00:00:00 2001
+From 6e75681d4c295240e6518dc449dc5274e7833fbb Mon Sep 17 00:00:00 2001
 From: Akash Yadav <akashyadav@appdevforall.org>
 Date: Mon, 4 May 2026 14:24:33 +0530
 Subject: [PATCH 9/9] fix: make KaResolutionProvider and impl inheritable
@@ -67,5 +67,5 @@ index 29d9b44d4321..01ca9c28e685 100644
          Caffeine.newBuilder().weakKeys().softValues().expireAfterAccess(Duration.ofSeconds(10)).build()
  }
 -- 
-2.53.0
+2.54.0
 

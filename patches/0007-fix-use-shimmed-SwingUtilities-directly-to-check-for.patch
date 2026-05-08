@@ -1,4 +1,4 @@
-From fb5bacc5a4700c2b24405103e6553403f4433cec Mon Sep 17 00:00:00 2001
+From e03cdab95b3604be4672081805fb198b2f745c1b Mon Sep 17 00:00:00 2001
 From: Akash Yadav <akashyadav@appdevforall.org>
 Date: Thu, 26 Mar 2026 14:37:27 +0530
 Subject: [PATCH 7/9] fix: use shimmed SwingUtilities directly to check for
@@ -36,5 +36,5 @@ index 17fe373e1130..682c3551264e 100644
  
      private fun isProhibitedWriteActionAnalysis(application: Application): Boolean =
 -- 
-2.53.0
+2.54.0
 
