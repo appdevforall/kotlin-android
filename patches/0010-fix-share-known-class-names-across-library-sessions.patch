@@ -1,0 +1,119 @@
+From 10f7fbee0413cef967f6ced01f82f19063910ebb Mon Sep 17 00:00:00 2001
+From: Akash Yadav <akashyadav@appdevforall.org>
+Date: Tue, 13 Oct 2026 12:35:09 +0000
+Subject: [PATCH 10/10] fix: share known class names across library sessions
+
+Signed-off-by: Akash Yadav <akashyadav@appdevforall.org>
+---
+ .../compiler/KotlinCliJavaFileManagerImpl.kt  | 59 ++++++++++++++++---
+ 1 file changed, 50 insertions(+), 9 deletions(-)
+
+diff --git a/compiler/cli/cli-base/src/org/jetbrains/kotlin/cli/jvm/compiler/KotlinCliJavaFileManagerImpl.kt b/compiler/cli/cli-base/src/org/jetbrains/kotlin/cli/jvm/compiler/KotlinCliJavaFileManagerImpl.kt
+index 810d4e612694..b5b9afb48d67 100644
+--- a/compiler/cli/cli-base/src/org/jetbrains/kotlin/cli/jvm/compiler/KotlinCliJavaFileManagerImpl.kt
++++ b/compiler/cli/cli-base/src/org/jetbrains/kotlin/cli/jvm/compiler/KotlinCliJavaFileManagerImpl.kt
+@@ -19,6 +19,7 @@ package org.jetbrains.kotlin.cli.jvm.compiler
+ import com.intellij.core.CoreJavaFileManager
+ import com.intellij.openapi.diagnostic.Logger
+ import com.intellij.openapi.util.text.StringUtil
++import com.intellij.openapi.vfs.StandardFileSystems
+ import com.intellij.openapi.vfs.VirtualFile
+ import com.intellij.psi.*
+ import com.intellij.psi.impl.file.PsiPackageImpl
+@@ -46,6 +47,8 @@ import org.jetbrains.kotlin.util.PhaseSideType
+ import org.jetbrains.kotlin.util.tryMeasureSideTime
+ import org.jetbrains.kotlin.utils.SmartList
+ import org.jetbrains.kotlin.utils.addIfNotNull
++import java.util.Collections
++import java.util.concurrent.ConcurrentHashMap
+ 
+ // TODO: do not inherit from CoreJavaFileManager to avoid accidental usage of its methods which do not use caches/indices
+ // Currently, the only relevant usage of this class as CoreJavaFileManager is at CoreJavaDirectoryService.getPackage,
+@@ -68,6 +71,17 @@ class KotlinCliJavaFileManagerImpl(private val myPsiManager: PsiManager) : CoreJ
+      */
+     private val topLevelClassesCache: MutableMap<FqName, SmartList<VirtualFile>?> = Object2ObjectOpenHashMap()
+ 
++    /**
++     * Caches the class names that JAR and JRT roots contribute to [knownClassNamesInPackage], per package.
++     *
++     * The result does not depend on any scope, but every Analysis API library session asks for it through its own
++     * `FirJavaFacade` and caches what it gets. Without this cache each session holds its own copy of the same names, so memory
++     * grows with library sessions times packages resolved. Archive contents are read once by their file systems, so caching
++     * them adds no staleness; directory roots can gain files (sources, or classes written by a build), so their names are still
++     * collected on every call. Roots added to the index after [initialize] are not seen for packages already cached.
++     */
++    private val archiveClassNamesCache = ConcurrentHashMap<FqName, Set<String>>()
++
+     private val allScope = GlobalSearchScope.allScope(myPsiManager.project)
+     private var usePsiClassFilesReading = false
+ 
+@@ -83,6 +97,7 @@ class KotlinCliJavaFileManagerImpl(private val myPsiManager: PsiManager) : CoreJ
+         this.singleJavaFileRootsIndex = singleJavaFileRootsIndex
+         this.usePsiClassFilesReading = usePsiClassFilesReading
+         this.perfManager = perfManager
++        archiveClassNamesCache.clear()
+     }
+ 
+     private fun findPsiClass(classId: ClassId, searchScope: GlobalSearchScope): PsiClass? {
+@@ -290,23 +305,49 @@ class KotlinCliJavaFileManagerImpl(private val myPsiManager: PsiManager) : CoreJ
+     }
+ 
+     override fun knownClassNamesInPackage(packageFqName: FqName): Set<String> {
++        val archiveNames = archiveClassNamesCache.computeIfAbsent(packageFqName) {
++            Collections.unmodifiableSet(collectClassNames(it) { dir, rootType -> rootType == JavaRoot.RootType.BINARY && dir.isInArchive })
++        }
++
++        val liveNames = collectClassNames(packageFqName) { dir, rootType -> rootType != JavaRoot.RootType.BINARY || !dir.isInArchive }
++        for (classId in singleJavaFileRootsIndex.findJavaSourceClasses(packageFqName)) {
++            assert(!classId.isNestedClass) { "ClassId of a single .java source class should not be nested: $classId" }
++            liveNames.add(classId.shortClassName.asString())
++        }
++
++        return if (liveNames.isEmpty()) archiveNames else UnionSet(archiveNames, liveNames)
++    }
++
++    private val VirtualFile.isInArchive: Boolean
++        get() = fileSystem.protocol.let { it == StandardFileSystems.JAR_PROTOCOL || it == StandardFileSystems.JRT_PROTOCOL }
++
++    private fun collectClassNames(
++        packageFqName: FqName,
++        acceptDirectory: (VirtualFile, JavaRoot.RootType) -> Boolean,
++    ): MutableSet<String> {
+         val result = ObjectOpenHashSet<String>()
+-        index.traverseDirectoriesInPackage(packageFqName, continueSearch = { dir, _ ->
+-            for (child in dir.children) {
+-                if (child.extension == "class" || child.extension == "java" || child.extension == "sig") {
+-                    result.add(child.nameWithoutExtension)
++        index.traverseDirectoriesInPackage(packageFqName, continueSearch = { dir, rootType ->
++            if (acceptDirectory(dir, rootType)) {
++                for (child in dir.children) {
++                    if (child.extension == "class" || child.extension == "java" || child.extension == "sig") {
++                        result.add(child.nameWithoutExtension)
++                    }
+                 }
+             }
+ 
+             true
+         })
++        return result
++    }
+ 
+-        for (classId in singleJavaFileRootsIndex.findJavaSourceClasses(packageFqName)) {
+-            assert(!classId.isNestedClass) { "ClassId of a single .java source class should not be nested: $classId" }
+-            result.add(classId.shortClassName.asString())
+-        }
++    /** A read-only view of two sets that keeps the shared [first] set instead of copying it. */
++    private class UnionSet(private val first: Set<String>, private val second: Set<String>) : AbstractSet<String>() {
++        override val size: Int
++            get() = first.size + second.count { it !in first }
+ 
+-        return result
++        override fun contains(element: String): Boolean = element in first || element in second
++
++        override fun iterator(): Iterator<String> = (first.asSequence() + second.asSequence().filter { it !in first }).iterator()
+     }
+ 
+     override fun findModules(moduleName: String, scope: GlobalSearchScope): Collection<PsiJavaModule> {
+-- 
+2.53.0
+
