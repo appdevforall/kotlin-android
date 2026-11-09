@@ -1,0 +1,38 @@
+From 79b18db79741e6240d145ffb7bbc41ac73694a10 Mon Sep 17 00:00:00 2001
+From: Akash Yadav <akashyadav@appdevforall.org>
+Date: Thu, 5 Nov 2026 17:59:30 +0000
+Subject: [PATCH] feat: allow embedders to provide the jar file system
+
+---
+ .../compiler/KotlinCoreApplicationEnvironment.kt   | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/compiler/cli/cli-base/src/org/jetbrains/kotlin/cli/jvm/compiler/KotlinCoreApplicationEnvironment.kt b/compiler/cli/cli-base/src/org/jetbrains/kotlin/cli/jvm/compiler/KotlinCoreApplicationEnvironment.kt
+index 766c8f82ef90..9bed5e9d7311 100644
+--- a/compiler/cli/cli-base/src/org/jetbrains/kotlin/cli/jvm/compiler/KotlinCoreApplicationEnvironment.kt
++++ b/compiler/cli/cli-base/src/org/jetbrains/kotlin/cli/jvm/compiler/KotlinCoreApplicationEnvironment.kt
+@@ -98,7 +98,21 @@ class KotlinCoreApplicationEnvironment private constructor(
+         return KotlinLocalFileSystem()
+     }
+ 
++    /* Called from the superclass constructor, so it may only read companion state. */
++    override fun createJarFileSystem(): VirtualFileSystem {
++        return jarFileSystemFactory?.invoke() ?: super.createJarFileSystem()
++    }
++
+     companion object {
++        /**
++         * Supplies the jar [VirtualFileSystem] for new environments, or null to use the default one.
++         *
++         * Must be set before the first [KotlinCoreApplicationEnvironment] is created.
++         */
++        @JvmStatic
++        @Volatile
++        var jarFileSystemFactory: (() -> VirtualFileSystem)? = null
++
+         @Deprecated(
+             message = "The `unitTestMode` flag is deprecated in favor of `KotlinCoreApplicationEnvironmentMode` configuration.",
+             replaceWith = ReplaceWith("create(parentDisposable, KotlinCoreApplicationEnvironmentMode.fromUnitTestModeFlag(unitTestMode))"),
+-- 
+2.53.0
+
