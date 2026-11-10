@@ -1,0 +1,64 @@
+From f000c3fc39450cec9eb35426bbf608534649aab4 Mon Sep 17 00:00:00 2001
+From: Akash Yadav <akashyadav@appdevforall.org>
+Date: Tue, 10 Nov 2026 14:23:08 +0000
+Subject: [PATCH] feat: let embedders search only the sealed class's package
+ for inheritors
+
+---
+ .../KotlinDirectInheritorsProvider.kt           | 17 +++++++++++++++++
+ .../fir/providers/LLSealedInheritorsProvider.kt |  7 +++----
+ 2 files changed, 20 insertions(+), 4 deletions(-)
+
+diff --git a/analysis/analysis-api-platform-interface/src/org/jetbrains/kotlin/analysis/api/platform/declarations/KotlinDirectInheritorsProvider.kt b/analysis/analysis-api-platform-interface/src/org/jetbrains/kotlin/analysis/api/platform/declarations/KotlinDirectInheritorsProvider.kt
+index a3eff7054e20..7092f44b4dd9 100644
+--- a/analysis/analysis-api-platform-interface/src/org/jetbrains/kotlin/analysis/api/platform/declarations/KotlinDirectInheritorsProvider.kt
++++ b/analysis/analysis-api-platform-interface/src/org/jetbrains/kotlin/analysis/api/platform/declarations/KotlinDirectInheritorsProvider.kt
+@@ -33,6 +33,23 @@ public interface KotlinDirectInheritorsProvider : KotlinPlatformComponent {
+         includeLocalInheritors: Boolean = true,
+     ): Iterable<KtClassOrObject>
+ 
++    /**
++     * Returns the direct *Kotlin* inheritors of [ktClass] in [scope] that are declared in the same package as [ktClass].
++     *
++     * Sealed class inheritors must share the sealed class's package, so this is all the sealed inheritors search needs. The default
++     * filters [getDirectKotlinInheritors]; an implementation that can search a single package should override it. The contract of
++     * [getDirectKotlinInheritors] applies otherwise.
++     */
++    public fun getSamePackageDirectKotlinInheritors(
++        ktClass: KtClass,
++        scope: GlobalSearchScope,
++        includeLocalInheritors: Boolean = true,
++    ): Iterable<KtClassOrObject> {
++        val packageFqName = ktClass.containingKtFile.packageFqName
++        return getDirectKotlinInheritors(ktClass, scope, includeLocalInheritors)
++            .filter { it.containingKtFile.packageFqName == packageFqName }
++    }
++
+     public companion object {
+         public fun getInstance(project: Project): KotlinDirectInheritorsProvider = project.service()
+     }
+diff --git a/analysis/low-level-api-fir/src/org/jetbrains/kotlin/analysis/low/level/api/fir/providers/LLSealedInheritorsProvider.kt b/analysis/low-level-api-fir/src/org/jetbrains/kotlin/analysis/low/level/api/fir/providers/LLSealedInheritorsProvider.kt
+index f69568a842f8..951671ab38db 100644
+--- a/analysis/low-level-api-fir/src/org/jetbrains/kotlin/analysis/low/level/api/fir/providers/LLSealedInheritorsProvider.kt
++++ b/analysis/low-level-api-fir/src/org/jetbrains/kotlin/analysis/low/level/api/fir/providers/LLSealedInheritorsProvider.kt
+@@ -95,14 +95,13 @@ internal class LLSealedInheritorsProvider(private val project: Project) : Sealed
+             targetModule.contentScope
+         }
+ 
+-        return searchInScope(targetKtClass, targetFirClass.classId, scope)
++        return searchInScope(targetKtClass, scope)
+     }
+ 
+-    private fun searchInScope(ktClass: KtClass, classId: ClassId, scope: GlobalSearchScope): List<ClassId> =
++    private fun searchInScope(ktClass: KtClass, scope: GlobalSearchScope): List<ClassId> =
+         KotlinDirectInheritorsProvider.getInstance(project)
+-            .getDirectKotlinInheritors(ktClass, scope, includeLocalInheritors = false)
++            .getSamePackageDirectKotlinInheritors(ktClass, scope, includeLocalInheritors = false)
+             .mapNotNull { it.getClassId() }
+-            .filter { it.packageFqName == classId.packageFqName }
+             // Enforce a deterministic order on the result, e.g. for stable test output.
+             .sortedBy { it.toString() }
+             .ifEmpty { emptyList() }
+-- 
+2.53.0
+
